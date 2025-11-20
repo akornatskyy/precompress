@@ -1,0 +1,29 @@
+name: tests
+
+on:
+  schedule:
+    - cron: "10 3 * * 0"  # At 03:10 on Sunday.
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go: ['1.25']
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+      - run: |
+          go build
