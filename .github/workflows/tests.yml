@@ -27,3 +27,4 @@ jobs:
           go-version: ${{ matrix.go }}
       - run: |
           go build
+          go test -count 10 ./...
