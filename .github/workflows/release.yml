@@ -1,0 +1,53 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: extract version and metadata
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILD_DATE=$(date)" >> $GITHUB_ENV
+
+      - name: build binary
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ env.VERSION }}
+          GIT_COMMIT: ${{ env.GIT_COMMIT }}
+        run: |
+          mkdir -p dist/
+          OUTPUT="precompress-${GOOS}-${GOARCH}"
+          if [ "$GOOS" == "windows" ]; then OUTPUT="$OUTPUT.exe"; fi
+          go build -o dist/$OUTPUT -ldflags "-s -w \
+            -X github.com/akornatskyy/precompress/cmd/cli.Version=${VERSION} \
+            -X github.com/akornatskyy/precompress/cmd/cli.GitCommit=${GIT_COMMIT} \
+            -X 'github.com/akornatskyy/precompress/cmd/cli.BuildDate=${BUILD_DATE}'"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
