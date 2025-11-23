@@ -14,7 +14,7 @@ var (
 )
 
 type Options struct {
-	Args     []string
+	Paths    []string
 	MinSize  int64
 	MaxDepth int
 }
@@ -42,7 +42,7 @@ func ParseArgs() (Options, error) {
 		os.Exit(0)
 	}
 
-	opts.Args = flag.Args()
+	opts.Paths = flag.Args()
 	return opts, nil
 }
 

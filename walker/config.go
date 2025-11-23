@@ -10,47 +10,40 @@ import (
 	"github.com/akornatskyy/precompress/compressors/zstd"
 )
 
-type config struct {
+type walker struct {
 	minSize   int64
 	maxDepth  int
 	providers map[string]compressors.CompressorProvider
 	exclude   []string
-	paths     []string
 }
 
-type Option func(c *config) error
-
-func errorOption(err error) Option {
-	return func(_ *config) error {
-		return err
-	}
-}
+type Option func(c *walker) error
 
 func MinSize(size int64) Option {
-	return func(c *config) error {
+	return func(w *walker) error {
 		if size < 0 {
 			return fmt.Errorf("minimum size can not be negative: %d", size)
 		}
-		c.minSize = size
+		w.minSize = size
 		return nil
 	}
 }
 
 func MaxDepth(depth int) Option {
-	return func(c *config) error {
+	return func(w *walker) error {
 		if depth < 0 {
 			return fmt.Errorf("max depth can not be negative: %d", depth)
 		}
-		c.maxDepth = depth
+		w.maxDepth = depth
 		return nil
 	}
 }
 
 func Exclude(exclude []string) Option {
-	return func(c *config) error {
+	return func(w *walker) error {
 		for _, ext := range exclude {
-			if !slices.Contains(c.exclude, ext) {
-				c.exclude = append(c.exclude, ext)
+			if !slices.Contains(w.exclude, ext) {
+				w.exclude = append(w.exclude, ext)
 			}
 		}
 
@@ -58,48 +51,35 @@ func Exclude(exclude []string) Option {
 	}
 }
 
-func Paths(paths []string) Option {
-	return func(c *config) error {
-		if len(paths) == 0 {
-			return fmt.Errorf("no input files or directories provided")
-		}
-		c.paths = paths
-		return nil
-	}
-}
-
 func BrotliCompressionLevel(level int) Option {
-	p, err := brotli.New(brotli.Options{Quality: level})
-	if err != nil {
-		return errorOption(err)
-	}
-
-	return func(c *config) error {
-		c.providers[".br"] = p
+	return func(w *walker) error {
+		p, err := brotli.New(brotli.Options{Quality: level})
+		if err != nil {
+			return err
+		}
+		w.providers[".br"] = p
 		return nil
 	}
 }
 
 func GzipCompressionLevel(level int) Option {
-	p, err := gzip.New(gzip.Options{Level: level})
-	if err != nil {
-		return errorOption(err)
-	}
-
-	return func(c *config) error {
-		c.providers[".gz"] = p
+	return func(w *walker) error {
+		p, err := gzip.New(gzip.Options{Level: level})
+		if err != nil {
+			return err
+		}
+		w.providers[".gz"] = p
 		return nil
 	}
 }
 
 func ZstdCompressionLevel(level int) Option {
-	p, err := zstd.New(zstd.Options{Level: level})
-	if err != nil {
-		return errorOption(err)
-	}
-
-	return func(c *config) error {
-		c.providers[".zst"] = p
+	return func(w *walker) error {
+		p, err := zstd.New(zstd.Options{Level: level})
+		if err != nil {
+			return err
+		}
+		w.providers[".zst"] = p
 		return nil
 	}
 }

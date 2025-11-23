@@ -15,12 +15,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = walker.Walk(
+	w, err := walker.New(
 		walker.MinSize(opts.MinSize),
 		walker.MaxDepth(opts.MaxDepth),
-		walker.Paths(opts.Args),
 	)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error initializing walker:", err)
+		os.Exit(1)
+	}
+
+	if err = w.Walk(opts.Paths); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

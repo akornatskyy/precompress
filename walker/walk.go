@@ -15,7 +15,11 @@ import (
 	"github.com/akornatskyy/precompress/compressors/zstd"
 )
 
-func Walk(opts ...Option) error {
+type Walker interface {
+	Walk(paths []string) error
+}
+
+func New(opts ...Option) (Walker, error) {
 	defaults := []Option{
 		MinSize(1024),
 		Exclude([]string{".gz", ".br", ".zst"}),
@@ -25,16 +29,19 @@ func Walk(opts ...Option) error {
 	}
 	opts = append(defaults, opts...)
 
-	c := config{providers: map[string]compressors.CompressorProvider{}}
+	w := &walker{providers: map[string]compressors.CompressorProvider{}}
 	for _, o := range opts {
-		if err := o(&c); err != nil {
-			return err
+		if err := o(w); err != nil {
+			return nil, err
 		}
 	}
+	return w, nil
+}
 
+func (w *walker) Walk(paths []string) error {
 	sem := make(chan struct{}, max(runtime.NumCPU()/2, 2))
 	var wg sync.WaitGroup
-	for _, path := range c.paths {
+	for _, path := range paths {
 		rootDepth := strings.Count(filepath.Clean(path), string(filepath.Separator))
 		err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -42,13 +49,13 @@ func Walk(opts ...Option) error {
 			}
 
 			if d.IsDir() {
-				if c.maxDepth != 0 &&
+				if w.maxDepth != 0 &&
 					(strings.Count(path, string(filepath.Separator))-rootDepth) >=
-						c.maxDepth {
+						w.maxDepth {
 					return fs.SkipDir
 				}
 			} else {
-				for _, ext := range c.exclude {
+				for _, ext := range w.exclude {
 					if strings.HasSuffix(path, ext) {
 						return nil
 					}
@@ -58,7 +65,7 @@ func Walk(opts ...Option) error {
 				if err != nil {
 					return fmt.Errorf("error getting path info %q: %v", path, err)
 				}
-				if fi.Size() < c.minSize {
+				if fi.Size() < w.minSize {
 					return nil
 				}
 
@@ -69,7 +76,7 @@ func Walk(opts ...Option) error {
 						<-sem
 						wg.Done()
 					}()
-					if err := process(&c, path, fi); err != nil {
+					if err := process(w, path, fi); err != nil {
 						log.Printf("error processing %q: %v", path, err)
 					}
 				}(path, fi)
