@@ -1,19 +1,35 @@
-package walker
+package precompressor
 
 import (
 	"bytes"
 	"io"
 	"io/fs"
 	"os"
+
+	"github.com/akornatskyy/precompress/compressors"
 )
 
-func process(w *walker, path string, fi fs.FileInfo) error {
+type Precompressor struct {
+	providers map[string]compressors.CompressorProvider
+}
+
+func New(opts ...Option) (*Precompressor, error) {
+	w := &Precompressor{providers: map[string]compressors.CompressorProvider{}}
+	for _, o := range opts {
+		if err := o(w); err != nil {
+			return nil, err
+		}
+	}
+	return w, nil
+}
+
+func (p *Precompressor) Precompress(path string, fi fs.FileInfo) error {
 	ts := fi.ModTime()
 
 	var source []byte
 	var compressed = &bytes.Buffer{}
 
-	for ext, provider := range w.providers {
+	for ext, provider := range p.providers {
 		target_path := path + ext
 		tfi, err := os.Stat(target_path)
 		if err == nil {
