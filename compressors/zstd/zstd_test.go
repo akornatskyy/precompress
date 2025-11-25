@@ -13,7 +13,7 @@ import (
 
 var _ compressors.CompressorProvider = &zstd.Compressor{}
 
-func TestGzip(t *testing.T) {
+func TestZstd(t *testing.T) {
 	t.Parallel()
 
 	s := []byte("Hello, World!")
