@@ -2,6 +2,7 @@ package precompressor
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/fs"
 	"os"
@@ -79,10 +80,9 @@ func writeToFile(path string, buffer *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(f.Name())
 
 	if _, err = io.Copy(f, buffer); err != nil {
-		return err
+		return errors.Join(err, os.Remove(f.Name()))
 	}
 
 	if err = f.Close(); err != nil {
