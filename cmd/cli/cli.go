@@ -25,7 +25,7 @@ func ParseArgs() (Options, error) {
 	var showVersion bool
 
 	flag.Int64Var(&opts.MinSize, "min-size", 1024, "Minimum content size")
-	flag.IntVar(&opts.MaxDepth, "max-depth", 0, "Descend at most levels of directories")
+	flag.IntVar(&opts.MaxDepth, "max-depth", 0, "Descend at most levels of directories (default 0 means no limit)")
 	flag.BoolVar(&showHelp, "help", false, "Show help message")
 	flag.BoolVar(&showHelp, "h", false, "Show help message (shorthand)")
 	flag.BoolVar(&showVersion, "version", false, "Show version info and exit")
@@ -50,11 +50,19 @@ func printUsage() {
 	fmt.Println(`Usage:
   precompress [options] <files,dirs,...>
 
+Description:
+  Generates precompressed versions of static files using Brotli, Gzip, and
+  Zstandard algorithms for faster content delivery in production environments.
+
 Options:
   --min-size <bytes>     Minimum content size (default 1024)
   --max-depth <levels>   Descend at most levels of directories
+                         (default 0 means no limit)
   -h, --help             Show this help message
-  -v, --version          Show version`)
+  -v, --version          Show version
+
+Examples:
+  precompress public`)
 }
 
 func printVersion() {
