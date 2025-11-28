@@ -1,9 +1,7 @@
 package walker
 
 import (
-	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,12 +33,22 @@ func New(opts ...Option) (Walker, error) {
 func (w *walker) Walk(paths []string, fn WalkFunc) error {
 	sem := make(chan struct{}, max(runtime.NumCPU()/2, 2))
 	var wg sync.WaitGroup
+	var errMutex sync.Mutex
+	var fnErr error
+
 	for _, path := range paths {
 		rootDepth := strings.Count(filepath.Clean(path), string(filepath.Separator))
 		err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
+
+			errMutex.Lock()
+			if fnErr != nil {
+				errMutex.Unlock()
+				return filepath.SkipAll
+			}
+			errMutex.Unlock()
 
 			if d.IsDir() {
 				if w.maxDepth != 0 &&
@@ -71,9 +79,11 @@ func (w *walker) Walk(paths []string, fn WalkFunc) error {
 						wg.Done()
 					}()
 					if err := fn(path, fi); err != nil {
-						// TODO: better error propagation?
-						fmt.Fprintf(os.Stderr, "Error processing %q: %v\n", path, err)
-						os.Exit(1)
+						errMutex.Lock()
+						if fnErr == nil {
+							fnErr = err
+						}
+						errMutex.Unlock()
 					}
 				}(path, fi)
 			}
@@ -86,5 +96,5 @@ func (w *walker) Walk(paths []string, fn WalkFunc) error {
 	}
 
 	wg.Wait()
-	return nil
+	return fnErr
 }
