@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/akornatskyy/precompress/compressors"
 )
@@ -76,7 +77,7 @@ func (p *Precompressor) Precompress(path string, fi fs.FileInfo) error {
 }
 
 func writeToFile(path string, buffer *bytes.Buffer) error {
-	f, err := os.CreateTemp(os.TempDir(), "precompress-")
+	f, err := os.CreateTemp(filepath.Dir(path), "precompress-*.tmp")
 	if err != nil {
 		return err
 	}
