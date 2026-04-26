@@ -42,7 +42,7 @@ jobs:
             -X github.com/akornatskyy/precompress/cmd/cli.Version=${VERSION} \
             -X github.com/akornatskyy/precompress/cmd/cli.GitCommit=${GIT_COMMIT} \
             -X 'github.com/akornatskyy/precompress/cmd/cli.BuildDate=${BUILD_DATE}'"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
         env:
