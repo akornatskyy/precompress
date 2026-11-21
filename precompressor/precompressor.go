@@ -3,7 +3,6 @@ package precompressor
 import (
 	"bytes"
 	"errors"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -68,7 +67,7 @@ func (p *Precompressor) Precompress(path string, fi fs.FileInfo) error {
 			}
 		}
 
-		if err = writeToFile(target_path, compressed); err != nil {
+		if err = writeToFile(target_path, compressed.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -76,19 +75,18 @@ func (p *Precompressor) Precompress(path string, fi fs.FileInfo) error {
 	return nil
 }
 
-func writeToFile(path string, buffer *bytes.Buffer) error {
+func writeToFile(path string, data []byte) error {
 	f, err := os.CreateTemp(filepath.Dir(path), "precompress-*.tmp")
 	if err != nil {
 		return err
 	}
-
-	if _, err = io.Copy(f, buffer); err != nil {
-		return errors.Join(err, os.Remove(f.Name()))
+	_, err = f.Write(data)
+	err = errors.Join(err, f.Close())
+	if err == nil {
+		err = os.Rename(f.Name(), path)
 	}
-
-	if err = f.Close(); err != nil {
-		return err
+	if err != nil {
+		err = errors.Join(err, os.Remove(f.Name()))
 	}
-
-	return os.Rename(f.Name(), path)
+	return err
 }
